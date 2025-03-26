@@ -9,30 +9,36 @@ magenta=$(tput setaf 5); cyan=$(tput setaf 6); white=$(tput setaf 7); bold=$(tpu
 
 outputpath="/log/bdinfo"
 bdinfocli_dir="/etc/abox/app/bdinfocli"
-github_url="https://github.com/akina-up/seedbox-info/tree/main/tools/bdinfocli"
+bdinfocli_path="/etc/abox/app/bdinfocli/BDInfo.exe"
+repo_url="https://github.com/akina-up/seedbox-info.git"
+target_dir="tools/bdinfocli"
+
 
 mkdir -p "$outputpath"
 
-if [[ ! -d "$bdinfocli_dir" ]]; then
-  mkdir -p "$(dirname "$bdinfocli_dir")"
-  
-  if ! command -v svn &>/dev/null; then
-    echo "错误：需要安装 subversion (svn) 来下载目录。"
-    echo "请通过以下命令安装:"
-    echo "  Ubuntu/Debian: sudo apt-get install subversion"
-    echo "  CentOS/RHEL  : sudo yum install subversion"
-    exit 1
-  fi
 
-  echo "正在下载 bdinfocli 目录到: $bdinfocli_dir"
-  svn export --force "$github_url" "$bdinfocli_dir"
+if [[ ! -d "$bdinfocli_dir" ]]; then
+
+  temp_dir=$(mktemp -d)
+  echo "正在克隆仓库到临时目录: $temp_dir"
   
-  if [[ $? -ne 0 ]]; then
-    echo "错误：目录下载失败，请检查网络或仓库地址！"
-    exit 1
-  fi
+
+  git clone --depth 1 --filter=blob:none --no-checkout "$repo_url" "$temp_dir"
+  cd "$temp_dir"
+  
+
+  git sparse-checkout init --cone
+  git sparse-checkout set "$target_dir"
+  git checkout main  
+  
+
+  mkdir -p "$(dirname "$bdinfocli_dir")"
+  mv "$temp_dir/$target_dir" "$bdinfocli_dir"
+  
+  rm -rf "$temp_dir"
+  echo "下载完成: $bdinfocli_dir"
 else
-  echo "跳过下载：目标目录已存在 $bdinfocli_dir"
+  echo "目录已存在，跳过下载: $bdinfocli_dir"
 fi
 
 
