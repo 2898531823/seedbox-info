@@ -37,8 +37,7 @@ if [[ ! -d "$bdinfocli_dir" ]]; then
   
   rm -rf "$temp_dir"
   echo "下载完成: $bdinfocli_dir"
-else
-  echo "目录已存在，跳过下载: $bdinfocli_dir"
+
 fi
 
 
