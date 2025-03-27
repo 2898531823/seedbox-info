@@ -397,7 +397,7 @@ if ls /log/screenshots/*.png 1> /dev/null 2>&1; then
         printf "[img]%s[/img]\n" "${images[@]}"
         
         # 输出带缩略图的中心对齐格式（URL之间无空格）
-        echo -e "\n上传结果(缩略图画廊):"
+        echo -e "\n上传结果(缩略图):"
         echo -n "[center]"
         for ((i=0; i<${#webpages[@]}; i++)); do
             echo -n "[url=${webpages[$i]}][img]${thumbnails[$i]}[/img][/url]"
