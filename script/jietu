@@ -1,6 +1,7 @@
 #!/bin/bash
 #
-
+# https://github.com/akina-up/seedbox-info
+# Author: akina
 #
 # --------------------------------------------------------------------------------
 # If you would like to change the output path,
@@ -41,7 +42,7 @@ elif [[ -f "$SKIP_FLAG_FILE" ]]; then
     USE_PTPIMG=false
 else
     # 首次运行，没有API也未跳过，询问用户
-    echo "首次运行，请输入ptpimg API密钥(按n跳过并永久使用imgbox):"
+    echo "首次运行，请输入ptpimg API密钥(按n跳过并默认使用imgbox):"
     read -r api_key
     
     if [[ "$api_key" != "n" && "$api_key" != "N" ]]; then
@@ -50,7 +51,7 @@ else
         USE_PTPIMG=true
     else
         touch "$SKIP_FLAG_FILE"
-        echo "已永久跳过ptpimg API设置，将一直使用imgbox。"
+        echo "已跳过ptpimg API设置，将默认使用imgbox。要使用ptpimg,请在命令后面加上：-k api"
         USE_PTPIMG=false
     fi
 fi
