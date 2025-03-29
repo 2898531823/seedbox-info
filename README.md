@@ -5,5 +5,5 @@
    >> jietu (origin:https://github.com/Aniverse/inexistence/blob/master/00.Installation/script/jietu)
    
    > tools
-   >> bdinfocli (from:https://github.com/zoffline/BDInfoCLI-ng)
+   >> bdinfocli (from:https://github.com/rokibhasansagar/BDInfoCLI-ng)
 
