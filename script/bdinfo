@@ -29,7 +29,7 @@ if [[ ! -d "$bdinfocli_dir" ]]; then
 
   git sparse-checkout init --cone
   git sparse-checkout set "$target_dir"
-  git checkout main  
+  git checkout master  
   
 
   mkdir -p "$(dirname "$bdinfocli_dir")"
