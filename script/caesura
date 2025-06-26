@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# 基础 docker run 命令配置
+DOCKER_RED=(
+  docker run --rm \
+  --name caesura-red \
+  -v /root/docker/caesura/config.red.yml:/config.yml:ro \
+  -v /root/qb/red/in:/content:ro \
+  -v /root/qb/red/out:/output \
+  -v /root/docker/caesura/cache:/cache \
+  -v /root/qb/red/add:/add \
+  ghcr.io/rogueoneecho/caesura
+)
+
+DOCKER_OPS=(
+  docker run --rm \
+  --name caesura-ops \
+  -v /root/docker/caesura/config.ops.yml:/config.yml:ro \
+  -v /root/qb/red/in:/content:ro \
+  -v /root/qb/red/out:/output \
+  -v /root/docker/caesura/cache:/cache \
+  -v /root/qb/red/add:/add \
+  ghcr.io/rogueoneecho/caesura
+)
+
+# 处理容器选择参数
+USE_RED=false
+USE_OPS=false
+
+while [[ "$1" =~ ^- ]];do
+case "$1"in
+    -r)
+      USE_RED=true
+      ;;
+    -o)
+      USE_OPS=true
+      ;;
+    *)
+      echo "未知参数：$1"
+      exit 1
+      ;;
+esac
+  shift
+done
+
+# 如果都没指定，则两个都启用
+if ! $USE_RED && ! $USE_OPS;then
+  USE_RED=true
+  USE_OPS=true
+fi
+
+# 提取主命令
+CMD="$1"
+shift
+
+# 分发命令
+case "$CMD"in
+  v)
+    $USE_RED && "${DOCKER_RED[@]}" verify "$@"
+    $USE_OPS && "${DOCKER_OPS[@]}" verify "$@"
+    ;;
+  add)
+    $USE_RED && "${DOCKER_RED[@]}" queue add /cache/torrents
+    $USE_OPS && "${DOCKER_OPS[@]}" queue add /cache/torrents
+    ;;
+  up)
+if [ $# -eq 0 ];then
+      set -- --transcode --upload --limit 10 --wait-before-upload 30s
+fi
+    $USE_RED && "${DOCKER_RED[@]}" batch "$@"
+    $USE_OPS && "${DOCKER_OPS[@]}" batch "$@"
+    ;;
+  *)
+# 未知命令直接透传
+    $USE_RED && "${DOCKER_RED[@]}" "$CMD" "$@"
+    $USE_OPS && "${DOCKER_OPS[@]}" "$CMD" "$@"
+    ;;
+esac
