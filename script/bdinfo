@@ -1,54 +1,64 @@
 #!/bin/bash
-# Author: akina
-#
+# Author: akina (优化版本)
+# 优化：中文提示、美化显示输出
 #################################################################################
 
-
+# 颜色定义
 black=$(tput setaf 0); red=$(tput setaf 1); green=$(tput setaf 2); yellow=$(tput setaf 3); blue=$(tput setaf 4)
-magenta=$(tput setaf 5); cyan=$(tput setaf 6); white=$(tput setaf 7); bold=$(tput bold); normal=$(tput sgr0) ; jiacu=${normal}${bold}
+magenta=$(tput setaf 5); cyan=$(tput setaf 6); white=$(tput setaf 7); bold=$(tput bold); normal=$(tput sgr0)
+jiacu=${normal}${bold}
 
+# 配置路径
 outputpath="/log/bdinfo"
 bdinfocli_dir="/etc/abox/app/bdinfocli"
 bdinfocli_path="/etc/abox/app/bdinfocli/BDInfo.exe"
-repo_url="https://github.com/akina-up/seedbox-info.git"
+repo_url="https://github.com/2898531823/seedbox-info.git"
 target_dir="tools/bdinfocli"
 
-
+# 创建输出目录
 mkdir -p "$outputpath"
 
-
+# 安装BDInfoCLI（如果不存在）
 if [[ ! -d "$bdinfocli_dir" ]]; then
-
-  temp_dir=$(mktemp -d)
-  echo "正在克隆仓库到临时目录: $temp_dir"
-  
-
-  git clone --depth 1 --filter=blob:none --no-checkout "$repo_url" "$temp_dir"
-  cd "$temp_dir"
-  
-
-  git sparse-checkout init --cone
-  git sparse-checkout set "$target_dir"
-  git checkout master  
-  
-
-  mkdir -p "$(dirname "$bdinfocli_dir")"
-  mv "$temp_dir/$target_dir" "$bdinfocli_dir"
-  
-  rm -rf "$temp_dir"
-  echo "下载完成: $bdinfocli_dir"
-
+    echo -e "${bold}${yellow}正在安装BDInfoCLI工具...${normal}"
+    
+    temp_dir=$(mktemp -d)
+    echo -e "${cyan}正在克隆仓库到临时目录: ${white}$temp_dir${normal}"
+    
+    # 克隆仓库
+    git clone --depth 1 --filter=blob:none --no-checkout "$repo_url" "$temp_dir"
+    cd "$temp_dir"
+    
+    # 稀疏检出
+    git sparse-checkout init --cone
+    git sparse-checkout set "$target_dir"
+    git checkout master
+    
+    # 移动文件
+    mkdir -p "$(dirname "$bdinfocli_dir")"
+    mv "$temp_dir/$target_dir" "$bdinfocli_dir"
+    
+    # 清理临时目录
+    rm -rf "$temp_dir"
+    echo -e "${green}${bold}BDInfoCLI安装完成: ${white}$bdinfocli_dir${normal}"
 fi
 
-
-[[ ! `command -v mono` ]] && { echo -e "\n${bold}${red}警告 ${jiacu}未检测到 mono，因此无法扫描 BDinfo ...${normal}\n" ; exit 1 ; }
-
-
-if [[ $1 == ""  ]] || [[ ! -d $1 ]]; then
-    echo -e "\n${bold}${red}警告 ${jiacu}你必须输入 BDMV 的路径。如果路径里带空格的话还需要加上双引号${normal}\n"
+# 检查mono
+if [[ ! `command -v mono` ]]; then
+    echo -e "\n${bold}${red}警告 ${jiacu}未检测到 mono，因此无法扫描 BDinfo ...${normal}\n"
     exit 1
 fi
 
+# 检查参数
+if [[ $1 == "" ]] || [[ ! -d $1 ]]; then
+    echo -e "\n${bold}${red}警告 ${jiacu}你必须输入 BDMV 的路径。如果路径里带空格的话还需要加上双引号${normal}\n"
+    echo -e "${yellow}使用示例:${normal}"
+    echo -e "  ${cyan}./bdinfo_optimized.sh \"/path/to/BDMV\"${normal}"
+    echo -e "  ${cyan}./bdinfo_optimized.sh \"/home/user/Your Movie (2023)\"${normal}"
+    exit 1
+fi
+
+# 处理路径和文件名
 bdmvpath=`echo "$1"`
 file_title=`basename "$bdmvpath"`
 file_title_clean="$(echo "$file_title" | tr '[:space:]' '.')"
@@ -57,11 +67,24 @@ file_title_clean="$(echo "$file_title_clean" | tr -d '(')"
 file_title_clean="$(echo "$file_title_clean" | tr -d ')')"
 file_title_clean="` echo "$file_title_clean" | sed 's/\//\./' `"
 
-echo;echo
+echo -e "\n${bold}${blue}======================================== BDinfo 扫描开始 ========================================${normal}"
+echo -e "${cyan}BDMV路径: ${white}$bdmvpath${normal}"
+echo -e "${cyan}输出目录: ${white}$outputpath${normal}"
+echo -e "${cyan}文件名: ${white}$file_title_clean${normal}"
+echo -e "${bold}${blue}================================================================================${normal}\n"
+
+# 运行BDInfo扫描
+echo -e "${yellow}正在扫描BDMV，请稍候...${normal}"
 mono $bdinfocli_path "$bdmvpath" $outputpath
 
-[[ ! $? -eq 0 ]] && echo "${bold}运行 BDinfo 出错，退出脚本 ...${normal}" && exit 1
+# 检查扫描结果
+if [[ ! $? -eq 0 ]]; then
+    echo -e "${bold}${red}运行 BDinfo 出错，退出脚本 ...${normal}"
+    exit 1
+fi
 
+# 生成快速摘要
+echo -e "${yellow}正在生成快速摘要...${normal}"
 sed -n -E '
   /^QUICK SUMMARY:/ {
     s/^QUICK SUMMARY:[[:space:]]*//
@@ -76,17 +99,38 @@ sed -n -E '
   }
 ' "${outputpath}/BDINFO.${file_title}.txt" > "${outputpath}/${file_title_clean}.bdinfo.quick.summary.txt"
 
+# 生成主要摘要
+echo -e "${yellow}正在生成主要摘要...${normal}"
 sed -n '/DISC INFO/,/FILES/p' "${outputpath}/BDINFO.${file_title}.txt" > temptext
 count=`wc -l temptext | awk '{print $1-2}' `
 head -n $count temptext > "${outputpath}/${file_title_clean}.bdinfo.main.summary.txt"
 rm temptext
 
+# 重命名原始文件
 mv "${outputpath}/BDINFO.${file_title}.txt" "${outputpath}/${file_title_clean}.bdinfo.txt"
 
+# 清屏并显示结果
 clear
-echo -e "${bold}扫描完成。生成的 BDinfo 报告存放在 ${blue}\"${outputpath}\"${normal}"
+echo -e "${bold}${green}扫描完成。生成的 BDinfo 报告存放在 ${blue}\"${outputpath}\"${normal}"
 
-echo -e "\n${bold}${blue}---------------------------------------- BDinfo Quick Summary ----------------------------------------${normal}\n"
-if [[ ! `command -v lolcat` ]]; then cat "${outputpath}/${file_title_clean}.bdinfo.quick.summary.txt"
-else cat "${outputpath}/${file_title_clean}.bdinfo.quick.summary.txt" | lolcat ; fi
-echo -e "\n${bold}${blue}------------------------------- Just copy them, no need to download it -------------------------------${normal}\n"
+echo -e "\n${bold}${blue}---------------------------------------- BDinfo 快速摘要 ----------------------------------------${normal}\n"
+if [[ ! `command -v lolcat` ]]; then 
+    cat "${outputpath}/${file_title_clean}.bdinfo.quick.summary.txt"
+else 
+    cat "${outputpath}/${file_title_clean}.bdinfo.quick.summary.txt" | lolcat
+fi
+
+echo -e "\n${bold}${blue}---------------------------------------- BDinfo 主要摘要 ----------------------------------------${normal}\n"
+if [[ ! `command -v lolcat` ]]; then 
+    cat "${outputpath}/${file_title_clean}.bdinfo.main.summary.txt"
+else 
+    cat "${outputpath}/${file_title_clean}.bdinfo.main.summary.txt" | lolcat
+fi
+
+echo -e "\n${bold}${green}---------------------------------------- 扫描完成 ----------------------------------------${normal}"
+echo -e "${yellow}提示：${normal}直接复制上述内容即可，无需下载文件"
+echo -e "${cyan}生成的文件：${normal}"
+echo -e "  ${white}• ${file_title_clean}.bdinfo.txt${normal} (完整报告)"
+echo -e "  ${white}• ${file_title_clean}.bdinfo.quick.summary.txt${normal} (快速摘要)"
+echo -e "  ${white}• ${file_title_clean}.bdinfo.main.summary.txt${normal} (主要摘要)"
+echo -e "\n${bold}${green}BDinfo 扫描完成！${normal}"
